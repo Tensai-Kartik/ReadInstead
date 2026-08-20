@@ -11,6 +11,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string; message?: string }>;
   updateUser: (data: Partial<UserProfile>) => void;
+  updatePassword: (newPassword: string) => Promise<{ error?: string; message?: string }>;
   isAuthModalOpen: boolean;
   openAuthModal: (mode?: 'signin' | 'signup' | 'forgot') => void;
   closeAuthModal: () => void;
@@ -18,6 +19,13 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function getRedirectUrl(): string {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return window.location.origin;
+  }
+  return 'https://readinstead-chi.vercel.app';
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -70,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
         }
       } else {
-        // Fallback for offline development if saved in local storage
         if (localData && localData.id) {
           setUser(localData as UserProfile);
         } else {
@@ -83,7 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     if (isSupabaseConfigured()) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          // Open settings or notify user to update password
+          openAuthModal('signin');
+        }
+
         if (session?.user) {
           let localData: Partial<UserProfile> = {};
           try {
@@ -160,11 +172,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (isSupabaseConfigured()) {
+      const redirectUrl = getRedirectUrl();
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName }
+          data: { full_name: fullName },
+          emailRedirectTo: redirectUrl,
         }
       });
       if (error) return { error: error.message };
@@ -202,10 +216,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     if (!email) return { error: 'Email is required' };
     if (isSupabaseConfigured()) {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const redirectUrl = getRedirectUrl();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
       if (error) return { error: error.message };
     }
     return { message: 'Password reset link sent to your email.' };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      return { error: 'Password must be at least 6 characters.' };
+    }
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return { message: 'Password successfully updated.' };
+    }
+    return { message: 'Password updated locally.' };
   };
 
   const updateUser = (data: Partial<UserProfile>) => {
@@ -241,6 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signOut,
         resetPassword,
         updateUser,
+        updatePassword,
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,

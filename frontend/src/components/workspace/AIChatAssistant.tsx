@@ -20,6 +20,7 @@ import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { RAGChatMessage, SummaryContent } from '../../types';
 import { sendChatMessage, fetchChatHistory } from '../../services/aiService';
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
 
 export interface AIChatAssistantProps {
@@ -44,6 +45,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
   contextSummary,
   onSeekTimestamp,
 }) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<RAGChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +63,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
     async function loadHistory() {
       setIsLoading(true);
       try {
-        const history = await fetchChatHistory(videoId);
+        const history = await fetchChatHistory(videoId, user?.id);
         if (isMounted) {
           if (history && history.length > 0) {
             setMessages(history);
@@ -140,7 +142,8 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
         videoId,
         textToSend,
         videoTitle,
-        contextHint
+        contextHint,
+        user?.id
       );
 
       const assistantMessage: RAGChatMessage = {
