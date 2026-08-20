@@ -22,11 +22,30 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing, onOpe
 
   const isLive = isLiveProduction();
   const configured = isBackendConfigured();
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   const handleYoutubeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!youtubeUrl.trim()) return;
-    onStartProcessing(youtubeUrl.trim());
+    const clean = youtubeUrl.trim();
+    if (!clean) return;
+
+    // Validate YouTube URL
+    const isYouTube =
+      clean.includes('youtube.com/watch') ||
+      clean.includes('youtu.be/') ||
+      clean.includes('youtube.com/shorts/') ||
+      clean.includes('youtube.com/live/') ||
+      clean.includes('youtube.com/embed/') ||
+      clean.includes('m.youtube.com/watch') ||
+      /^[a-zA-Z0-9_-]{11}$/.test(clean);
+
+    if (!isYouTube) {
+      setUrlError('Please enter a valid YouTube link (e.g. https://www.youtube.com/watch?v=...)');
+      return;
+    }
+
+    setUrlError(null);
+    onStartProcessing(clean);
   };
 
   const handleFileDrop = (e: React.DragEvent) => {
@@ -113,21 +132,30 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing, onOpe
 
       {/* Mode 1: YouTube Link Input */}
       {activeTab === 'youtube' && (
-        <form onSubmit={handleYoutubeSubmit} className="flex flex-col gap-4 mt-2">
+        <form onSubmit={handleYoutubeSubmit} className="flex flex-col gap-3 mt-2">
           <Input
-            placeholder="Paste YouTube link here..."
+            placeholder="Paste YouTube link here (e.g. https://www.youtube.com/watch?v=...)"
             value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
+            onChange={(e) => {
+              setYoutubeUrl(e.target.value);
+              if (urlError) setUrlError(null);
+            }}
             leftIcon={<LinkIcon className="w-4 h-4" />}
             className="py-3 text-base"
           />
+
+          {urlError && (
+            <p className="text-xs text-red-500 dark:text-red-400 font-medium px-1">
+              {urlError}
+            </p>
+          )}
 
           <Button
             type="submit"
             size="lg"
             disabled={!youtubeUrl.trim()}
             rightIcon={<ArrowRight className="w-4 h-4" />}
-            className="w-full"
+            className="w-full mt-1"
           >
             Process Video
           </Button>

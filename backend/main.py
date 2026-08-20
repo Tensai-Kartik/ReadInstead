@@ -141,6 +141,10 @@ async def process_url_stream_endpoint(req: ProcessUrlRequest):
             return
 
         youtube_id = SmartCacheService.extract_youtube_id(clean_url)
+        if not youtube_id:
+            yield f"data: {json.dumps({'type': 'error', 'step_id': 1, 'message': 'Invalid YouTube link. Please provide a valid YouTube video URL.'})}\n\n"
+            return
+
         logger.info(f"[STREAM PIPELINE] Starting URL stream for '{clean_url}' (YouTube ID: {youtube_id})")
 
         try:
