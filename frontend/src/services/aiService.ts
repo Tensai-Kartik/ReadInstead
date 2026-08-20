@@ -145,7 +145,7 @@ export async function processVideoPipeline(
             onProgress([...steps], event.progress);
           }
         } else if (event.type === 'complete') {
-          finalData = event.payload;
+          finalData = event.payload || event.data || event.result || event;
           steps.forEach((s) => (s.status = 'completed'));
           if (onProgress) onProgress([...steps], 100);
         } else if (event.type === 'error') {

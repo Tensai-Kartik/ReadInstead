@@ -35,6 +35,7 @@ import {
 } from './services/aiService';
 import { ArrowLeft, Download, Sparkles, PlusCircle } from 'lucide-react';
 import { Button } from './components/common/Button';
+import { getApiUrl } from './lib/config';
 
 function formatCleanTitle(title: string): string {
   if (!title) return 'Educational Masterclass';
@@ -85,6 +86,26 @@ const MainAppContent: React.FC = () => {
   const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('en');
 
   const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-wakeup ping to Render backend on app load (silently warms up sleeping instance)
+  useEffect(() => {
+    let lastPing = 0;
+    const pingBackend = () => {
+      const now = Date.now();
+      if (now - lastPing < 60000) return; // limit to at most once per minute
+      lastPing = now;
+      try {
+        const endpoint = getApiUrl('/health');
+        fetch(endpoint, { method: 'GET', keepalive: true }).catch(() => {});
+      } catch {}
+    };
+
+    pingBackend();
+
+    // Re-ping when user returns/focuses the tab
+    window.addEventListener('focus', pingBackend);
+    return () => window.removeEventListener('focus', pingBackend);
+  }, []);
 
   // Load latest videos from Supabase on mount and when user auth changes
   useEffect(() => {

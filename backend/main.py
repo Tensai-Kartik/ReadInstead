@@ -160,7 +160,7 @@ async def process_url_stream_endpoint(req: ProcessUrlRequest):
                             yield f"data: {json.dumps({'type': 'progress', 'step_id': s_id, 'status': 'completed', 'progress': int((s_id / 8) * 100), 'message': 'Loaded from verified cache'})}\n\n"
                             await asyncio.sleep(0.03)
 
-                        yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'data': payload})}\n\n"
+                        yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'payload': payload, 'data': payload})}\n\n"
                         return
                     else:
                         logger.info(f"[STREAM CACHE INVALIDATED] Stale payload detected for '{youtube_id}'. Re-processing...")
@@ -293,7 +293,7 @@ async def process_url_stream_endpoint(req: ProcessUrlRequest):
                 "flashcards": flashcards
             }
 
-            yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'data': final_payload})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'payload': final_payload, 'data': final_payload})}\n\n"
 
         except Exception as e:
             logger.error(f"[STREAM PIPELINE ERROR] {e}")
@@ -578,7 +578,7 @@ async def process_file_stream_endpoint(
                 "flashcards": flashcards
             }
 
-            yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'data': final_payload})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'progress': 100, 'payload': final_payload, 'data': final_payload})}\n\n"
 
         except Exception as e:
             logger.error(f"[FILE STREAM ERROR] {e}")
