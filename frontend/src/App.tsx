@@ -46,7 +46,7 @@ function formatCleanTitle(title: string): string {
 }
 
 const MainAppContent: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [videos, setVideos] = useState<ProcessedVideo[]>(() => {
     try {
@@ -542,10 +542,12 @@ const MainAppContent: React.FC = () => {
 
       {/* Global Modals */}
       <AuthModal />
-      <BackendConfigModal
-        isOpen={isBackendModalOpen}
-        onClose={() => setIsBackendModalOpen(false)}
-      />
+      {isAdmin && (
+        <BackendConfigModal
+          isOpen={isBackendModalOpen}
+          onClose={() => setIsBackendModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileOpen,
   onOpenBackendModal,
 }) => {
-  const { user, signOut, openAuthModal, isAuthenticated } = useAuth();
+  const { user, signOut, openAuthModal, isAuthenticated, isAdmin } = useAuth();
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
@@ -104,8 +104,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Footer Section */}
       <div className="p-4 border-t border-gray-100 dark:border-[#1E2230] flex flex-col gap-3">
-        {/* Backend Status Indicator */}
-        {onOpenBackendModal && (
+        {/* Backend Status Indicator (Admin only) */}
+        {isAdmin && onOpenBackendModal && (
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1">
               <Cloud className="w-3 h-3" /> Server

@@ -6,6 +6,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { cn } from '../../lib/utils';
 import { isBackendConfigured, isLiveProduction } from '../../lib/config';
+import { useAuth } from '../../context/AuthContext';
 
 export interface UploadCardProps {
   onStartProcessing: (urlOrFile: string | File) => void;
@@ -13,6 +14,7 @@ export interface UploadCardProps {
 }
 
 export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing, onOpenBackendModal }) => {
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -63,8 +65,8 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing, onOpe
         </p>
       </div>
 
-      {/* Backend unconfigured helper banner on live domain */}
-      {isLive && !configured && onOpenBackendModal && (
+      {/* Backend unconfigured helper banner on live domain (Admin only) */}
+      {isAdmin && isLive && !configured && onOpenBackendModal && (
         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />

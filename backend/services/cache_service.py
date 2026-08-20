@@ -5,24 +5,40 @@ from typing import Optional, Dict, Any
 class SmartCacheService:
     @staticmethod
     def extract_youtube_id(url: str) -> Optional[str]:
-        if not url:
+        """
+        Robust YouTube Video ID extractor supporting all YouTube URL variations:
+        - https://www.youtube.com/watch?v=VIDEO_ID
+        - https://youtu.be/VIDEO_ID
+        - https://www.youtube.com/shorts/VIDEO_ID
+        - https://www.youtube.com/live/VIDEO_ID
+        - https://www.youtube.com/embed/VIDEO_ID
+        - https://m.youtube.com/watch?v=VIDEO_ID
+        - Bare 11-char ID
+        """
+        if not url or not isinstance(url, str):
             return None
-        # Handle v=... query param
-        v_match = re.search(r'[?&]v=([^&#]+)', url)
-        if v_match:
-            return v_match.group(1)
-        # Handle youtu.be/...
-        short_match = re.search(r'youtu\.be/([^?&#]+)', url)
-        if short_match:
-            return short_match.group(1)
-        # Handle /embed/... or /v/...
-        embed_match = re.search(r'/(?:embed|v)/([^?&#]+)', url)
-        if embed_match:
-            return embed_match.group(1)
-        # Standard regex fallback
-        match = re.search(r'([0-9A-Za-z_-]{11})', url)
-        if match:
-            return match.group(1)
+        
+        clean_url = url.strip()
+
+        # If it's already a clean 11-character YouTube video ID
+        if re.fullmatch(r'[a-zA-Z0-9_-]{11}', clean_url):
+            return clean_url
+
+        # Patterns for YouTube URLs
+        patterns = [
+            r'(?:v=|\/v\/|embed\/|shorts\/|live\/|youtu\.be\/|\/e\/)([a-zA-Z0-9_-]{11})',
+            r'[?&]v=([a-zA-Z0-9_-]{11})',
+            r'^([a-zA-Z0-9_-]{11})$',
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, clean_url)
+            if match:
+                vid_id = match.group(1)
+                # Ignore common words that match 11 chars
+                if vid_id.lower() not in ['watch_videos', 'subscription']:
+                    return vid_id
+
         return None
 
     @staticmethod

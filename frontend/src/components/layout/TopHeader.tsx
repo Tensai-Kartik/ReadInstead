@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu, Sun, Moon } from 'lucide-react';
 import { NavTab } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { BackendStatusBadge } from '../common/BackendStatusBadge';
 
 export interface TopHeaderProps {
@@ -16,6 +17,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onOpenBackendModal,
 }) => {
   const { theme, toggleTheme } = useTheme();
+  const { isAdmin } = useAuth();
 
   const getTitle = () => {
     switch (activeTab) {
@@ -52,7 +54,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        {onOpenBackendModal && (
+        {isAdmin && onOpenBackendModal && (
           <BackendStatusBadge onOpenConfigModal={onOpenBackendModal} className="text-[11px] px-2 py-0.5" />
         )}
 

@@ -46,7 +46,7 @@ export interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenBackendModal }) => {
   const { theme, setTheme } = useTheme();
-  const { user, signOut, updateUser } = useAuth();
+  const { user, signOut, updateUser, isAdmin } = useAuth();
 
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
@@ -265,173 +265,175 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenBackendModal }
         </div>
       )}
 
-      {/* 1. Cloud Backend & API Infrastructure Section */}
-      <Card className="p-6 flex flex-col gap-5 shadow-soft-sm">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-border-dark">
-          <div className="flex items-center gap-2">
-            <Cloud className="w-4 h-4 text-primary-500" />
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-              Backend & Cloud API (Render / FastAPI)
-            </h3>
-          </div>
+      {/* 1. Cloud Backend & API Infrastructure Section (Admin Only) */}
+      {isAdmin && (
+        <Card className="p-6 flex flex-col gap-5 shadow-soft-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-border-dark">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-primary-500" />
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                Backend & Cloud API (Render / FastAPI)
+              </h3>
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            {isHealthy ? (
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Healthy ({backendHealth.latencyMs}ms)
-              </span>
-            ) : (
-              <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">
-                <AlertCircle className="w-3.5 h-3.5" /> Offline / Disconnected
-              </span>
-            )}
-          </div>
-        </div>
-
-        {backendSaveMsg && (
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-            <Check className="w-4 h-4" />
-            <span>{backendSaveMsg}</span>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-            <span>FastAPI Server Endpoint</span>
-            {localStorage.getItem(BACKEND_URL_STORAGE_KEY) && (
-              <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold px-2 py-0.5 bg-primary-500/10 rounded-full">
-                Custom Override Saved
-              </span>
-            )}
-          </label>
-
-          <div className="flex gap-2">
-            <Input
-              value={backendUrlInput}
-              onChange={(e) => setBackendUrlInput(e.target.value)}
-              placeholder={isLive ? 'https://your-service.onrender.com' : 'http://localhost:8000'}
-              className="flex-1 font-mono text-xs"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => testBackend()}
-              disabled={isTestingBackend || isWakingUp}
-              className="shrink-0 text-xs px-3"
-            >
-              {isTestingBackend ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1 text-primary-500" />
+            <div className="flex items-center gap-1.5">
+              {isHealthy ? (
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Healthy ({backendHealth.latencyMs}ms)
+                </span>
               ) : (
-                <Zap className="w-3.5 h-3.5 mr-1 text-amber-500" />
+                <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">
+                  <AlertCircle className="w-3.5 h-3.5" /> Offline / Disconnected
+                </span>
               )}
-              Test
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleSaveBackendUrl}
-              disabled={isTestingBackend || isWakingUp}
-              className="shrink-0 text-xs px-4"
-            >
-              Save URL
-            </Button>
+            </div>
           </div>
 
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            For live Vercel deployments, enter your Render web service URL (e.g.{' '}
-            <code className="text-primary-600 dark:text-primary-400 font-mono bg-gray-100 dark:bg-[#1E2230] px-1 py-0.5 rounded">
-              https://readinstead-backend.onrender.com
-            </code>
-            ).
-          </p>
-
-          {/* Diagnostic metrics when healthy */}
-          {isHealthy && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-[#1E2230]">
-              <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60">
-                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                  <Cpu className="w-3 h-3 text-indigo-500" /> Engine
-                </div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
-                  faster-whisper
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60">
-                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                  <Key className="w-3 h-3 text-amber-500" /> Groq Pool
-                </div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
-                  {backendHealth.active_keys_count ?? 1} Key(s) Active
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60 col-span-2 sm:col-span-1">
-                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
-                  <Database className="w-3 h-3 text-emerald-500" /> Database
-                </div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
-                  Supabase PostgreSQL
-                </div>
-              </div>
+          {backendSaveMsg && (
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              <span>{backendSaveMsg}</span>
             </div>
           )}
 
-          {/* Render cold-start wake-up button if disconnected */}
-          {!isHealthy && (
-            <div className="pt-2 border-t border-gray-100 dark:border-[#1E2230] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Render free tier instance sleeping?
-              </span>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+              <span>FastAPI Server Endpoint</span>
+              {localStorage.getItem(BACKEND_URL_STORAGE_KEY) && (
+                <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold px-2 py-0.5 bg-primary-500/10 rounded-full">
+                  Custom Override Saved
+                </span>
+              )}
+            </label>
+
+            <div className="flex gap-2">
+              <Input
+                value={backendUrlInput}
+                onChange={(e) => setBackendUrlInput(e.target.value)}
+                placeholder={isLive ? 'https://your-service.onrender.com' : 'http://localhost:8000'}
+                className="flex-1 font-mono text-xs"
+              />
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleWakeUpRender}
-                disabled={isWakingUp || !backendUrlInput}
-                className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                onClick={() => testBackend()}
+                disabled={isTestingBackend || isWakingUp}
+                className="shrink-0 text-xs px-3"
               >
-                {isWakingUp ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                {isTestingBackend ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1 text-primary-500" />
                 ) : (
-                  <Zap className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                  <Zap className="w-3.5 h-3.5 mr-1 text-amber-500" />
                 )}
-                {isWakingUp ? 'Waking Up (~30s)...' : 'Wake Up Render Backend'}
+                Test
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveBackendUrl}
+                disabled={isTestingBackend || isWakingUp}
+                className="shrink-0 text-xs px-4"
+              >
+                Save URL
               </Button>
             </div>
-          )}
 
-          {isWakingUp && (
-            <div className="space-y-1.5 pt-1">
-              <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${wakeUpProg}%` }}
-                />
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              For live Vercel deployments, enter your Render web service URL (e.g.{' '}
+              <code className="text-primary-600 dark:text-primary-400 font-mono bg-gray-100 dark:bg-[#1E2230] px-1 py-0.5 rounded">
+                https://readinstead-backend.onrender.com
+              </code>
+              ).
+            </p>
+
+            {/* Diagnostic metrics when healthy */}
+            {isHealthy && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-[#1E2230]">
+                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60">
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                    <Cpu className="w-3 h-3 text-indigo-500" /> Engine
+                  </div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
+                    faster-whisper
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60">
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                    <Key className="w-3 h-3 text-amber-500" /> Groq Pool
+                  </div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
+                    {backendHealth.active_keys_count ?? 1} Key(s) Active
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-[#161923] border border-gray-200/60 dark:border-[#232736]/60 col-span-2 sm:col-span-1">
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                    <Database className="w-3 h-3 text-emerald-500" /> Database
+                  </div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white truncate mt-0.5">
+                    Supabase PostgreSQL
+                  </div>
+                </div>
               </div>
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 animate-pulse">
-                {wakeUpMsg || 'Sending wake-up ping to Render...'}
-              </p>
-            </div>
-          )}
-
-          <div className="pt-2 flex justify-between items-center text-xs">
-            <button
-              onClick={handleResetBackendUrl}
-              className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 underline font-medium"
-            >
-              Reset to Defaults
-            </button>
-            {onOpenBackendModal && (
-              <button
-                onClick={onOpenBackendModal}
-                className="text-primary-600 dark:text-primary-400 font-semibold hover:underline"
-              >
-                Open Full Connection Wizard ➔
-              </button>
             )}
+
+            {/* Render cold-start wake-up button if disconnected */}
+            {!isHealthy && (
+              <div className="pt-2 border-t border-gray-100 dark:border-[#1E2230] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Render free tier instance sleeping?
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleWakeUpRender}
+                  disabled={isWakingUp || !backendUrlInput}
+                  className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+                >
+                  {isWakingUp ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Zap className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                  )}
+                  {isWakingUp ? 'Waking Up (~30s)...' : 'Wake Up Render Backend'}
+                </Button>
+              </div>
+            )}
+
+            {isWakingUp && (
+              <div className="space-y-1.5 pt-1">
+                <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${wakeUpProg}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 animate-pulse">
+                  {wakeUpMsg || 'Sending wake-up ping to Render...'}
+                </p>
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-between items-center text-xs">
+              <button
+                onClick={handleResetBackendUrl}
+                className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 underline font-medium"
+              >
+                Reset to Defaults
+              </button>
+              {onOpenBackendModal && (
+                <button
+                  onClick={onOpenBackendModal}
+                  className="text-primary-600 dark:text-primary-400 font-semibold hover:underline"
+                >
+                  Open Full Connection Wizard ➔
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* 2. Theme Toggle */}
       <Card className="p-6 flex flex-col gap-4 shadow-soft-sm">
