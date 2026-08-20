@@ -1,0 +1,74 @@
+# =================================================================
+# ReadInstead — Git Ignore Rules
+# =================================================================
+
+# 1. Environment & Confidential Secrets (Excluding example templates)
+.env
+.env.*
+*.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+frontend/.env
+frontend/.env.*
+backend/.env
+backend/.env.*
+
+# Allow example environment configuration templates
+!.env.example
+!*.env.example
+!**/.env.example
+!frontend/.env.example
+!backend/.env.example
+
+# 2. Node & Frontend Dependencies and Builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+build/
+.next/
+out/
+.vercel/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 3. Python Virtual Environments, Bytecode & Caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage.*
+
+# 4. System & IDE Configurations
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# 5. Temporary & Scratch Files
+*.tmp
+tmp/
+temp/
+scratch/

@@ -1,0 +1,10 @@
+fastapi>=0.104.0
+uvicorn>=0.24.0
+openai>=1.10.0
+faster-whisper>=1.0.0
+supabase>=2.3.0
+youtube-transcript-api>=0.6.1
+yt-dlp>=2024.03.10
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.6

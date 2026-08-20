@@ -1,0 +1,23 @@
+{
+  "name": "readinstead-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ReadInstead — AI-Powered Video Lecture Summarizer and Study Guide Workspace",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend",
+    "lint": "npm run lint --prefix frontend"
+  },
+  "keywords": [
+    "ai",
+    "youtube-summarizer",
+    "fastapi",
+    "react",
+    "supabase",
+    "rag",
+    "groq"
+  ],
+  "author": "Tensai-Kartik",
+  "license": "MIT"
+}
