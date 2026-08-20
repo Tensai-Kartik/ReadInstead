@@ -73,37 +73,55 @@ cd ReadInstead
 - Copy `backend/.env.example` to `backend/.env`
 - Fill in your Supabase credentials and Groq API keys.
 
-### 3. Start Frontend
+### 3. Start Development Servers
+
+You can start both frontend & backend concurrently with a single command from the project root:
 ```bash
-cd frontend
-npm install
 npm run dev
 ```
 
-### 4. Start Backend Server
+Or run them individually in separate terminals:
 ```bash
-cd backend
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
+# Terminal 1: Frontend (http://localhost:5173)
+npm run frontend
 
-pip install -r requirements.txt
-python -m uvicorn main:app --reload --port 8000
+# Terminal 2: Backend (http://localhost:8000)
+npm run backend
 ```
+
 
 ---
 
-## ☁️ Vercel Deployment
+## ☁️ Live Production Deployment
 
+### 1. Deploy the Backend (Render / Railway / Fly.io / Docker)
+The FastAPI backend runs the Python processing pipeline, Whisper transcription, Groq LLM streaming, and Supabase vector queries.
+
+#### Option A: Deploy on Render (Recommended & Free)
+1. Push this repository to GitHub.
+2. In [Render Dashboard](https://dashboard.render.com), click **New + ➔ Web Service** and select your repository.
+3. Configure:
+   - **Root Directory**: `backend`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Add the backend environment variables (`GROQ_API_KEYS`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `DATABASE_URL`).
+5. Click **Create Web Service**. Copy your live backend URL (e.g. `https://readinstead-backend.onrender.com`).
+
+#### Option B: Deploy with Docker / Railway
+A pre-configured [`backend/Dockerfile`](file:///c:/Users/Kartik/Desktop/Project/ReadInstead/backend/Dockerfile) and [`backend/Procfile`](file:///c:/Users/Kartik/Desktop/Project/ReadInstead/backend/Procfile) are included for 1-click Docker and Railway deployments.
+
+---
+
+### 2. Deploy the Frontend (Vercel)
 1. Import the repository into [Vercel](https://vercel.com).
-2. Set the **Root Directory** to `./` (the repository includes a pre-configured `vercel.json` and build scripts).
+2. Set the **Root Directory** to `./` or `frontend/` (pre-configured `vercel.json` included).
 3. In **Project Settings ➔ Environment Variables**, add:
-   - `VITE_SUPABASE_URL`: Your Supabase Project URL
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase Anon Key
-   - `VITE_BACKEND_URL`: Your hosted FastAPI Backend URL (or leave default for local testing)
+   - `VITE_SUPABASE_URL`: `https://vrlkshomkjhxpnyqhrip.supabase.co`
+   - `VITE_SUPABASE_ANON_KEY`: `sb_publishable_bMQUJqORvjJV7YRcClohfg_x0hlr9Lt`
+   - `VITE_BACKEND_URL`: Your live backend URL from Step 1 (e.g., `https://readinstead-backend.onrender.com`)
 4. Click **Deploy**.
+
 
 ---
 

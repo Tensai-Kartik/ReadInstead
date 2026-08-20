@@ -1,7 +1,7 @@
 import { ProcessedVideo, ProcessingStep, RAGChatMessage, RAGSource } from '../types';
 import { extractYouTubeId } from '../lib/utils';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+import { BACKEND_URL } from '../lib/config';
 
 export const INITIAL_PROCESSING_STEPS: ProcessingStep[] = [
   { id: 1, label: 'Downloading Video', description: 'Retrieving media payload & metadata', status: 'pending' },
@@ -59,9 +59,22 @@ export async function processVideoPipeline(
       });
     }
   } catch (netErr: any) {
+    const isConnRefused = netErr.message?.includes('Failed to fetch') || netErr.name === 'TypeError';
+    const isLiveSite = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    let errorMsg: string;
+    if (isConnRefused && isLiveSite) {
+      errorMsg = `Live Backend Unreachable: Could not connect to API server (${BACKEND_URL || 'current host'}). Please ensure your backend is deployed (e.g. on Render / Railway) and 'VITE_BACKEND_URL' is set in your Vercel project environment settings.`;
+    } else if (isConnRefused) {
+      errorMsg = `Backend Server Offline: Could not connect to ${BACKEND_URL || 'http://localhost:8000'}. Please start the FastAPI backend (run 'npm run backend' or 'npm run dev').`;
+    } else {
+      errorMsg = `Connection error: ${netErr.message || 'Unable to connect to ReadInstead backend server.'}`;
+    }
+
     steps[0].status = 'error';
+    steps[0].description = errorMsg;
     if (onProgress) onProgress([...steps], 0);
-    throw new Error(`Connection error: ${netErr.message || 'Unable to connect to ReadInstead backend server.'}`);
+    throw new Error(errorMsg);
   }
 
   if (!response.ok) {
@@ -309,3 +322,13 @@ export async function savePersonalNote(videoId: string, content: string, userId?
   }
   return false;
 }
+
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/health`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
