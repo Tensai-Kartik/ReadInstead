@@ -8,14 +8,6 @@
   <strong>Transform long YouTube courses, video lectures, and MP4 recordings into structured executive summaries, key takeaways, chapter timelines, active recall flashcards, and grounded Q&A.</strong>
 </p>
 
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#vercel-deployment">Deploy to Vercel</a> •
-  <a href="#environment-variables">Environment Variables</a>
-</p>
 
 ---
 
