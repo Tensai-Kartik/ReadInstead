@@ -1,7 +1,6 @@
 import { ProcessedVideo, ProcessingStep, RAGChatMessage, RAGSource } from '../types';
 import { extractYouTubeId } from '../lib/utils';
-
-import { BACKEND_URL } from '../lib/config';
+import { getApiUrl, getBackendUrl, isBackendConfigured, isLiveProduction } from '../lib/config';
 
 export const INITIAL_PROCESSING_STEPS: ProcessingStep[] = [
   { id: 1, label: 'Downloading Video', description: 'Retrieving media payload & metadata', status: 'pending' },
@@ -34,8 +33,8 @@ export async function processVideoPipeline(
   if (onProgress) onProgress([...steps], 5);
 
   const streamEndpoint = isFile
-    ? `${BACKEND_URL}/api/process-file-stream`
-    : `${BACKEND_URL}/api/process-url-stream`;
+    ? getApiUrl('/api/process-file-stream')
+    : getApiUrl('/api/process-url-stream');
 
   let response: Response;
 
@@ -54,19 +53,26 @@ export async function processVideoPipeline(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: urlOrTitle,
-          user_id: userId
+          user_id: userId,
         }),
       });
     }
   } catch (netErr: any) {
-    const isConnRefused = netErr.message?.includes('Failed to fetch') || netErr.name === 'TypeError';
-    const isLiveSite = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    
+    const isConnRefused =
+      netErr.message?.includes('Failed to fetch') ||
+      netErr.message?.includes('NetworkError') ||
+      netErr.name === 'TypeError';
+    const isLive = isLiveProduction();
+    const activeBackendUrl = getBackendUrl();
+    const configured = isBackendConfigured();
+
     let errorMsg: string;
-    if (isConnRefused && isLiveSite) {
-      errorMsg = `Live Backend Unreachable: Could not connect to API server (${BACKEND_URL || 'current host'}). Please ensure your backend is deployed (e.g. on Render / Railway) and 'VITE_BACKEND_URL' is set in your Vercel project environment settings.`;
+    if (isLive && !configured) {
+      errorMsg = `Live Backend Not Connected: Please click 'Connect Backend' in the top header or sidebar to configure your Render backend URL (e.g. https://your-service.onrender.com).`;
+    } else if (isLive && isConnRefused) {
+      errorMsg = `Render Backend Sleeping or Unreachable (${activeBackendUrl}): On Render's free tier, servers sleep after 15 minutes of inactivity. Please wait 30 seconds for the instance to wake up or check your Backend Status in the header.`;
     } else if (isConnRefused) {
-      errorMsg = `Backend Server Offline: Could not connect to ${BACKEND_URL || 'http://localhost:8000'}. Please start the FastAPI backend (run 'npm run backend' or 'npm run dev').`;
+      errorMsg = `Backend Offline: Could not connect to ${activeBackendUrl || 'http://localhost:8000'}. Please start your FastAPI server (npm run backend).`;
     } else {
       errorMsg = `Connection error: ${netErr.message || 'Unable to connect to ReadInstead backend server.'}`;
     }
@@ -130,71 +136,100 @@ export async function processVideoPipeline(
                 steps[prev].status = 'completed';
               }
             }
-            steps[stepIndex].status = event.status;
+            steps[stepIndex].status = event.status || 'in_progress';
             if (event.message) {
               steps[stepIndex].description = event.message;
             }
           }
-          if (onProgress) {
-            onProgress([...steps], event.progress ?? 50);
+          if (onProgress && typeof event.progress === 'number') {
+            onProgress([...steps], event.progress);
           }
         } else if (event.type === 'complete') {
-          finalData = event.data;
-          for (let i = 0; i < steps.length; i++) {
-            steps[i].status = 'completed';
-          }
-          if (onProgress) {
-            onProgress([...steps], 100);
-          }
+          finalData = event.payload;
+          steps.forEach((s) => (s.status = 'completed'));
+          if (onProgress) onProgress([...steps], 100);
         } else if (event.type === 'error') {
-          const errorStepId = event.step_id || 1;
-          const errIndex = steps.findIndex((s) => s.id === errorStepId);
-          if (errIndex !== -1) {
-            steps[errIndex].status = 'error';
-            steps[errIndex].description = event.message || 'Error occurred during processing';
+          const stepIndex = steps.findIndex((s) => s.id === event.step_id);
+          if (stepIndex !== -1) {
+            steps[stepIndex].status = 'error';
+            steps[stepIndex].description = event.message || 'Processing step failed';
           }
-          if (onProgress) {
-            onProgress([...steps], 0);
-          }
-          throw new Error(event.message || 'An error occurred during video processing.');
+          if (onProgress) onProgress([...steps], 0);
+          throw new Error(event.message || 'An error occurred during video processing pipeline.');
         }
       }
     }
-  } catch (err: any) {
-    reader.cancel().catch(() => {});
-    throw err;
+  } catch (streamErr: any) {
+    steps.forEach((s) => {
+      if (s.status === 'in_progress') {
+        s.status = 'error';
+        s.description = streamErr.message || 'Stream processing disconnected';
+      }
+    });
+    if (onProgress) onProgress([...steps], 0);
+    throw streamErr;
   }
 
   if (finalData) {
-    const rawDur = finalData.video?.duration;
-    const chapters = finalData.summary?.chapter_timeline;
-    let resolvedDuration = rawDur;
-    if (!resolvedDuration || resolvedDuration === '25:00' || resolvedDuration === '00:00') {
-      if (chapters && chapters.length > 0) {
-        const lastChap = chapters[chapters.length - 1];
-        if (lastChap?.time && lastChap.time !== '00:00' && lastChap.time !== '25:00') {
-          resolvedDuration = lastChap.time;
-        }
-      }
-    }
-    const resolvedSeconds = finalData.video?.duration_seconds || (chapters && chapters.length > 0 ? chapters[chapters.length - 1]?.seconds : 765);
+    const questionsWithDefaults = (finalData.questions || []).map((q: any, i: number) => ({
+      id: q.id || `q_${i}_${Date.now()}`,
+      video_id: finalData.video?.id || videoId,
+      question_text: q.question_text || q.question || '',
+      question_type: q.question_type || 'MCQs',
+      difficulty: q.difficulty || 'Medium',
+      options: Array.isArray(q.options) && q.options.length > 0 ? q.options : ['True', 'False'],
+      correct_answer: q.correct_answer || (q.options ? q.options[0] : 'True'),
+      explanation: q.explanation || 'See relevant video section for conceptual grounding.',
+      start_seconds: q.start_seconds !== undefined ? q.start_seconds : (q.seconds !== undefined ? q.seconds : 0),
+      end_seconds: q.end_seconds,
+      timestamp: q.timestamp || '00:00',
+    }));
 
-    const dynamicThumbnail = finalData.video?.thumbnail_url || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : '/assets/logo_bg.png');
+    const flashcardsWithDefaults = (finalData.flashcards || []).map((f: any, i: number) => ({
+      id: f.id || `fc_${i}_${Date.now()}`,
+      video_id: finalData.video?.id || videoId,
+      front: f.front || f.term || 'Concept Key',
+      back: f.back || f.definition || 'Detailed explanation',
+      mastery_level: 'new' as const,
+      start_seconds: f.start_seconds !== undefined ? f.start_seconds : (f.seconds !== undefined ? f.seconds : 0),
+      end_seconds: f.end_seconds,
+      timestamp: f.timestamp || '00:00',
+    }));
+
+    const normalizedTimeline = (finalData.summary?.chapter_timeline || []).map((chap: any) => ({
+      time: chap.time || chap.timestamp || '00:00',
+      seconds: chap.seconds !== undefined ? chap.seconds : 0,
+      title: chap.title || 'Chapter Section',
+      description: chap.description || chap.notes || '',
+    }));
+
+    const finalSummary = {
+      executive_summary: finalData.summary?.executive_summary || '',
+      tldr: finalData.summary?.tldr || '',
+      detailed_notes: finalData.summary?.detailed_notes || [],
+      key_takeaways: finalData.summary?.key_takeaways || [],
+      important_concepts: finalData.summary?.important_concepts || [],
+      chapter_timeline: normalizedTimeline,
+    };
 
     return {
       id: finalData.video?.id || videoId,
+      user_id: userId,
       title: finalData.video?.title || videoTitle,
-      youtube_url: finalData.video?.youtube_url || (isUrl ? urlOrTitle : ''),
-      duration: resolvedDuration || '12:45',
-      duration_seconds: resolvedSeconds || 765,
-      channel: finalData.video?.channel || (isFile ? 'Uploaded File' : 'Video Lecture'),
-      thumbnail_url: dynamicThumbnail,
-      processed_at: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      summary: finalData.summary,
-      questions: finalData.questions || [],
-      flashcards: finalData.flashcards || [],
-      personal_note: '',
-      completion_percentage: 0
+      youtube_url: isUrl ? urlOrTitle : '',
+      embed_url: finalData.video?.embed_url || '',
+      duration: finalData.video?.duration || '15:00',
+      duration_seconds: finalData.video?.duration_seconds || 900,
+      channel: finalData.video?.channel || 'Educational Masterclass',
+      thumbnail_url: finalData.video?.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60',
+      processed_at: finalData.video?.processed_at || new Date().toISOString(),
+      summary: finalSummary,
+      original_summary: JSON.parse(JSON.stringify(finalSummary)),
+      translations: {},
+      questions: questionsWithDefaults,
+      flashcards: flashcardsWithDefaults,
+      personal_note: finalData.video?.personal_note || '',
+      completion_percentage: finalData.video?.completion_percentage || 0,
     };
   }
 
@@ -208,7 +243,7 @@ export async function sendChatMessage(
   contextHint?: string,
   userId?: string
 ): Promise<{ answer: string; sources: RAGSource[] }> {
-  const endpoint = `${BACKEND_URL}/api/chat-with-video`;
+  const endpoint = getApiUrl('/api/chat-with-video');
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -231,7 +266,7 @@ export async function sendChatMessage(
         start_seconds: s.start_seconds !== undefined ? s.start_seconds : (s.seconds !== undefined ? s.seconds : 0),
         end_seconds: s.end_seconds,
         snippet: s.snippet || '',
-        retrieval_method: s.retrieval_method
+        retrieval_method: s.retrieval_method,
       }));
       return {
         answer: data.answer || "I couldn't find a direct answer in the transcript.",
@@ -252,9 +287,11 @@ export async function fetchChatHistory(
   videoId: string,
   userId?: string
 ): Promise<RAGChatMessage[]> {
-  const endpoint = userId
-    ? `${BACKEND_URL}/api/chat-history/${videoId}?user_id=${userId}`
-    : `${BACKEND_URL}/api/chat-history/${videoId}`;
+  const path = userId
+    ? `/api/chat-history/${videoId}?user_id=${encodeURIComponent(userId)}`
+    : `/api/chat-history/${videoId}`;
+  const endpoint = getApiUrl(path);
+
   try {
     const response = await fetch(endpoint);
     if (response.ok) {
@@ -278,7 +315,9 @@ export async function fetchChatHistory(
 }
 
 export async function fetchUserHistory(userId?: string): Promise<ProcessedVideo[]> {
-  const endpoint = userId ? `${BACKEND_URL}/api/videos?user_id=${userId}` : `${BACKEND_URL}/api/videos`;
+  const path = userId ? `/api/videos?user_id=${encodeURIComponent(userId)}` : `/api/videos`;
+  const endpoint = getApiUrl(path);
+
   try {
     const response = await fetch(endpoint);
     if (response.ok) {
@@ -294,7 +333,7 @@ export async function fetchUserHistory(userId?: string): Promise<ProcessedVideo[
 }
 
 export async function deleteVideoFromHistory(videoId: string): Promise<boolean> {
-  const endpoint = `${BACKEND_URL}/api/videos/${videoId}`;
+  const endpoint = getApiUrl(`/api/videos/${videoId}`);
   try {
     const response = await fetch(endpoint, { method: 'DELETE' });
     if (response.ok) {
@@ -307,7 +346,7 @@ export async function deleteVideoFromHistory(videoId: string): Promise<boolean> 
 }
 
 export async function savePersonalNote(videoId: string, content: string, userId?: string): Promise<boolean> {
-  const endpoint = `${BACKEND_URL}/api/save-note`;
+  const endpoint = getApiUrl('/api/save-note');
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -325,10 +364,10 @@ export async function savePersonalNote(videoId: string, content: string, userId?
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${BACKEND_URL}/health`);
+    const endpoint = getApiUrl('/health');
+    const response = await fetch(endpoint);
     return response.ok;
   } catch {
     return false;
   }
 }
-

@@ -7,10 +7,12 @@ import {
   FileText,
   Settings,
   LogOut,
+  Cloud,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { NavTab } from '../../types';
 import { cn } from '../../lib/utils';
+import { BackendStatusBadge } from '../common/BackendStatusBadge';
 
 export interface SidebarProps {
   activeTab: NavTab;
@@ -18,6 +20,7 @@ export interface SidebarProps {
   hasActiveVideo?: boolean;
   isMobileOpen?: boolean;
   setIsMobileOpen?: (open: boolean) => void;
+  onOpenBackendModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   hasActiveVideo,
   setIsMobileOpen,
+  onOpenBackendModal,
 }) => {
   const { user, signOut, openAuthModal, isAuthenticated } = useAuth();
 
@@ -100,6 +104,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Footer Section */}
       <div className="p-4 border-t border-gray-100 dark:border-[#1E2230] flex flex-col gap-3">
+        {/* Backend Status Indicator */}
+        {onOpenBackendModal && (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500 flex items-center gap-1">
+              <Cloud className="w-3 h-3" /> Server
+            </span>
+            <BackendStatusBadge onOpenConfigModal={onOpenBackendModal} />
+          </div>
+        )}
+
         {/* User Profile Card */}
         {isAuthenticated && user ? (
           <div className="flex items-center justify-between p-2.5 rounded-2xl bg-gray-50 dark:bg-[#161923] border border-gray-200/70 dark:border-[#232736]">

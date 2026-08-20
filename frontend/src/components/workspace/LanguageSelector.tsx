@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Globe, Check, Loader2 } from 'lucide-react';
 import { LanguageCode, SummaryContent } from '../../types';
 import { LANGUAGE_OPTIONS, translateSummaryLocally } from '../../lib/translator';
-import { BACKEND_URL } from '../../lib/config';
+import { getApiUrl } from '../../lib/config';
 
 export interface LanguageSelectorProps {
   videoId: string;
@@ -38,7 +38,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     let translated: SummaryContent | null = null;
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/translate-summary`, {
+      const res = await fetch(getApiUrl('/api/translate-summary'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

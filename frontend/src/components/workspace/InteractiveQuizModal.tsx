@@ -17,7 +17,7 @@ import confetti from 'canvas-confetti';
 import { Question, QuestionDifficulty } from '../../types';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
-import { BACKEND_URL } from '../../lib/config';
+import { getApiUrl } from '../../lib/config';
 
 export interface InteractiveQuizModalProps {
   isOpen: boolean;
@@ -130,7 +130,7 @@ export const InteractiveQuizModal: React.FC<InteractiveQuizModalProps> = ({
 
       // Persist to backend API
       try {
-        fetch(`${BACKEND_URL}/api/quiz-attempt`, {
+        fetch(getApiUrl('/api/quiz-attempt'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

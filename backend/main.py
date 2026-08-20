@@ -112,6 +112,15 @@ class SaveNoteRequest(BaseModel):
     content: str
     user_id: Optional[str] = None
 
+@app.get("/", status_code=status.HTTP_200_OK)
+def root_endpoint():
+    return {
+        "status": "healthy",
+        "service": "ReadInstead AI SaaS API",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @app.get("/health", status_code=status.HTTP_200_OK)
 def health_check():
     return {

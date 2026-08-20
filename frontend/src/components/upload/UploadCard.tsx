@@ -1,20 +1,25 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Video, Upload, Link as LinkIcon, FileVideo, Sparkles, ArrowRight } from 'lucide-react';
+import { Video, Upload, Link as LinkIcon, FileVideo, Sparkles, ArrowRight, Cloud, AlertCircle } from 'lucide-react';
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { cn } from '../../lib/utils';
+import { isBackendConfigured, isLiveProduction } from '../../lib/config';
 
 export interface UploadCardProps {
   onStartProcessing: (urlOrFile: string | File) => void;
+  onOpenBackendModal?: () => void;
 }
 
-export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing }) => {
+export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing, onOpenBackendModal }) => {
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const isLive = isLiveProduction();
+  const configured = isBackendConfigured();
 
   const handleYoutubeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +62,24 @@ export const UploadCard: React.FC<UploadCardProps> = ({ onStartProcessing }) => 
           Save time by reading instead of watching. Paste any YouTube link or upload a video file to get instant executive summaries, key takeaways, timelines, and Q&A.
         </p>
       </div>
+
+      {/* Backend unconfigured helper banner on live domain */}
+      {isLive && !configured && onOpenBackendModal && (
+        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Render backend URL not connected yet.</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenBackendModal}
+            className="text-xs shrink-0 border-amber-500/40 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300"
+          >
+            Connect Backend ➔
+          </Button>
+        </div>
+      )}
 
       {/* Tab Selectors */}
       <div className="flex items-center justify-center gap-2 p-1.5 bg-gray-100 dark:bg-[#161923] rounded-2xl max-w-sm mx-auto border border-gray-200/60 dark:border-[#232736]">

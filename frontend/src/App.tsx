@@ -23,6 +23,7 @@ import { NotesManager } from './components/notes/NotesManager';
 import { SettingsView } from './components/settings/SettingsView';
 import { LoginPage } from './components/auth/LoginPage';
 import { AuthModal } from './components/auth/AuthModal';
+import { BackendConfigModal } from './components/common/BackendConfigModal';
 
 import { ProcessedVideo, ProcessingStep, NavTab, LanguageCode, SummaryContent } from './types';
 import {
@@ -80,6 +81,7 @@ const MainAppContent: React.FC = () => {
   // Modals & Multilingual state
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isBackendModalOpen, setIsBackendModalOpen] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('en');
 
   const mainContainerRef = useRef<HTMLDivElement>(null);
@@ -276,7 +278,12 @@ const MainAppContent: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 font-sans">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block shrink-0">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} hasActiveVideo={!!selectedVideo} />
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          hasActiveVideo={!!selectedVideo}
+          onOpenBackendModal={() => setIsBackendModalOpen(true)}
+        />
       </div>
 
       {/* Mobile Drawer Overlay */}
@@ -293,6 +300,7 @@ const MainAppContent: React.FC = () => {
               hasActiveVideo={!!selectedVideo}
               isMobileOpen={isMobileSidebarOpen}
               setIsMobileOpen={setIsMobileSidebarOpen}
+              onOpenBackendModal={() => setIsBackendModalOpen(true)}
             />
           </div>
         </div>
@@ -303,6 +311,7 @@ const MainAppContent: React.FC = () => {
         <TopHeader
           activeTab={activeTab}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          onOpenBackendModal={() => setIsBackendModalOpen(true)}
         />
 
         <main ref={mainContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -492,7 +501,10 @@ const MainAppContent: React.FC = () => {
                         </Button>
                       </div>
                     )}
-                    <UploadCard onStartProcessing={handleStartProcessing} />
+                    <UploadCard
+                      onStartProcessing={handleStartProcessing}
+                      onOpenBackendModal={() => setIsBackendModalOpen(true)}
+                    />
                   </div>
                 )}
               </div>
@@ -521,13 +533,19 @@ const MainAppContent: React.FC = () => {
             )}
 
             {/* 6. SETTINGS VIEW */}
-            {activeTab === 'settings' && <SettingsView />}
+            {activeTab === 'settings' && (
+              <SettingsView onOpenBackendModal={() => setIsBackendModalOpen(true)} />
+            )}
           </div>
         </main>
       </div>
 
-      {/* Global Auth Modal */}
+      {/* Global Modals */}
       <AuthModal />
+      <BackendConfigModal
+        isOpen={isBackendModalOpen}
+        onClose={() => setIsBackendModalOpen(false)}
+      />
     </div>
   );
 };
